@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>UltraBot Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #111118;
+  --surface2: #1a1a28;
+  --border: #2a2a3f;
+  --accent: #7c5cfc;
+  --accent2: #fc5c7c;
+  --accent3: #5cfc9f;
+  --accent4: #fcb85c;
+  --text: #e8e8ff;
+  --muted: #7070a0;
+  --red: #fc5c5c;
+  --green: #5cfca0;
+  --yellow: #fcdc5c;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Syne', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* BG grid */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(124,92,252,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,92,252,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* glow orbs */
+body::after {
+  content: '';
+  position: fixed;
+  top: -200px; left: -200px;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(124,92,252,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: 260px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  padding: 0 0 24px;
+}
+
+.sidebar-logo {
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  width: 42px; height: 42px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.logo-text {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.logo-text span {
+  color: var(--accent);
+}
+
+.sidebar-section {
+  padding: 20px 12px 8px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 24px;
+  cursor: pointer;
+  border-radius: 0;
+  transition: all 0.15s;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  position: relative;
+  border-left: 3px solid transparent;
+  margin: 1px 0;
+}
+
+.nav-item:hover {
+  background: var(--surface2);
+  color: var(--text);
+  border-left-color: var(--border);
+}
+
+.nav-item.active {
+  background: rgba(124,92,252,0.12);
+  color: var(--accent);
+  border-left-color: var(--accent);
+}
+
+.nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+.nav-badge {
+  margin-left: auto;
+  background: var(--accent2);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.nav-badge.green { background: var(--accent3); color: #0a0a0f; }
+.nav-badge.yellow { background: var(--accent4); color: #0a0a0f; }
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px 24px 0;
+  border-top: 1px solid var(--border);
+}
+
+.bot-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--surface2);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 2s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.status-text { font-size: 12px; font-weight: 600; }
+.status-sub { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+/* ── MAIN ── */
+.main {
+  margin-left: 260px;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+.topbar {
+  padding: 20px 36px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(10,10,15,0.8);
+  backdrop-filter: blur(20px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.page-title span { color: var(--accent); }
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.topbar-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.topbar-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.topbar-btn.primary:hover { opacity: 0.85; }
+
+.content {
+  padding: 32px 36px;
+}
+
+/* ── SECTION MANAGEMENT ── */
+.section { display: none; }
+.section.active { display: block; }
+
+/* ── STATS ROW ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px 22px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.stat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  filter: blur(30px);
+  opacity: 0.3;
+}
+
+.stat-card:nth-child(1)::before { background: var(--accent); }
+.stat-card:nth-child(2)::before { background: var(--accent2); }
+.stat-card:nth-child(3)::before { background: var(--accent3); }
+.stat-card:nth-child(4)::before { background: var(--accent4); }
+
+.stat-icon { font-size: 24px; margin-bottom: 10px; }
+.stat-value { font-size: 32px; font-weight: 800; letter-spacing: -1px; font-family: 'JetBrains Mono', monospace; }
+.stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-change { font-size: 11px; margin-top: 6px; font-family: 'JetBrains Mono', monospace; }
+.stat-change.up { color: var(--green); }
+.stat-change.down { color: var(--red); }
+
+/* ── PANEL ── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.panel-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-body { padding: 20px 24px; }
+
+/* ── TABLE ── */
+.table { width: 100%; border-collapse: collapse; }
+.table th {
+  text-align: left;
+  padding: 8px 14px;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
+  border-bottom: 1px solid var(--border);
+}
+.table td {
+  padding: 12px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(42,42,63,0.5);
+}
+.table tr:last-child td { border-bottom: none; }
+.table tr:hover td { background: var(--surface2); }
+
+/* ── BADGE ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+.badge.red { background: rgba(252,92,92,0.15); color: var(--red); }
+.badge.green { background: rgba(92,252,160,0.15); color: var(--green); }
+.badge.yellow { background: rgba(252,220,92,0.15); color: var(--yellow); }
+.badge.purple { background: rgba(124,92,252,0.15); color: var(--accent); }
+.badge.blue { background: rgba(92,180,252,0.15); color: #5cb4fc; }
+
+/* ── TOGGLE ── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(42,42,63,0.5);
+}
+.toggle-row:last-child { border-bottom: none; }
+
+.toggle-info {}
+.toggle-label { font-size: 14px; font-weight: 600; }
+.toggle-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.toggle {
+  position: relative;
+  width: 46px; height: 26px;
+  flex-shrink: 0;
+}
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 26px;
+  cursor: pointer;
+  transition: 0.25s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 18px; height: 18px;
+  left: 4px; bottom: 4px;
+  background: var(--muted);
+  border-radius: 50%;
+  transition: 0.25s;
+}
+.toggle input:checked + .toggle-slider { background: var(--accent); }
+.toggle input:checked + .toggle-slider::before {
+  transform: translateX(20px);
+  background: white;
+}
+
+/* ── INPUT ── */
+.input-group { margin-bottom: 16px; }
+.input-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; display: block; }
+.input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input:focus { border-color: var(--accent); }
+.input::placeholder { color: var(--muted); }
+
+select.input {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%237070a0' d='M0 0l6 8 6-8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+/* ── BUTTON ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+.btn-danger { background: rgba(252,92,92,0.15); color: var(--red); border: 1px solid rgba(252,92,92,0.3); }
+.btn-danger:hover { background: rgba(252,92,92,0.25); }
+.btn-success { background: rgba(92,252,160,0.15); color: var(--green); border: 1px solid rgba(92,252,160,0.3); }
+.btn-success:hover { background: rgba(92,252,160,0.25); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+
+/* ── ACTIVITY FEED ── */
+.activity-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(42,42,63,0.4);
+  align-items: flex-start;
+}
+.activity-item:last-child { border-bottom: none; }
+.activity-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.activity-icon.red { background: rgba(252,92,92,0.15); }
+.activity-icon.green { background: rgba(92,252,160,0.15); }
+.activity-icon.yellow { background: rgba(252,220,92,0.15); }
+.activity-icon.purple { background: rgba(124,92,252,0.15); }
+.activity-icon.blue { background: rgba(92,180,252,0.15); }
+.activity-text { flex: 1; }
+.activity-desc { font-size: 13px; font-weight: 600; }
+.activity-meta { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+
+/* ── SETUP GUIDE ── */
+.setup-step {
+  display: flex;
+  gap: 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid rgba(42,42,63,0.4);
+  align-items: flex-start;
+}
+.setup-step:last-child { border-bottom: none; }
+.step-num {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.step-content {}
+.step-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.step-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+.code-block {
+  background: #0d0d15;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent3);
+  position: relative;
+  overflow-x: auto;
+}
+
+.code-block .comment { color: var(--muted); }
+.code-block .key { color: var(--accent); }
+.code-block .val { color: var(--accent4); }
+.code-block .str { color: var(--accent2); }
+
+.copy-btn {
+  position: absolute;
+  top: 8px; right: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.copy-btn:hover { color: var(--text); border-color: var(--accent); }
+
+/* ── GRID 2 ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+/* ── COMMAND LIST ── */
+.cmd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.cmd-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.cmd-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.cmd-name { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent); font-weight: 700; }
+.cmd-desc { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.cmd-badge { margin-top: 8px; }
+
+/* ── ALERT ── */
+.alert {
+  padding: 14px 18px;
+  border-radius: 10px;
+  border-left: 4px solid;
+  margin-bottom: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.alert-warning { background: rgba(252,184,92,0.1); border-color: var(--accent4); color: var(--accent4); }
+.alert-info { background: rgba(124,92,252,0.1); border-color: var(--accent); color: var(--accent); }
+.alert-danger { background: rgba(252,92,92,0.1); border-color: var(--red); color: var(--red); }
+.alert-success { background: rgba(92,252,160,0.1); border-color: var(--green); color: var(--green); }
+
+/* ── SETUP TIMELINE ── */
+.render-steps {
+  position: relative;
+  padding-left: 40px;
+}
+.render-steps::before {
+  content: '';
+  position: absolute;
+  left: 17px; top: 20px; bottom: 20px;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--accent), var(--accent2), transparent);
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 14px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  z-index: 9999;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ── SEARCH ── */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin-bottom: 20px;
+}
+.search-bar input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  flex: 1;
+}
+.search-bar input::placeholder { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🛡️</div>
+    <div>
+      <div class="logo-text">Ultra<span>Bot</span></div>
+      <div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;">Dashboard v2.0</div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">Overview</div>
+  <div class="nav-item active" onclick="showSection('overview',this)"><span class="icon">📊</span> Overview</div>
+  <div class="nav-item" onclick="showSection('activity',this)"><span class="icon">⚡</span> Live Activity <span class="nav-badge">Live</span></div>
+
+  <div class="sidebar-section">Moderation</div>
+  <div class="nav-item" onclick="showSection('automod',this)"><span class="icon">🤖</span> AutoMod Config</div>
+  <div class="nav-item" onclick="showSection('warnings',this)"><span class="icon">⚠️</span> Warnings <span class="nav-badge">12</span></div>
+  <div class="nav-item" onclick="showSection('reports',this)"><span class="icon">🚨</span> Reports <span class="nav-badge yellow">3</span></div>
+  <div class="nav-item" onclick="showSection('modlog',this)"><span class="icon">📋</span> Mod Log</div>
+
+  <div class="sidebar-section">Configuration</div>
+  <div class="nav-item" onclick="showSection('channels',this)"><span class="icon">📡</span> Channels</div>
+  <div class="nav-item" onclick="showSection('roles',this)"><span class="icon">🎭</span> Roles & Staff</div>
+  <div class="nav-item" onclick="showSection('premium',this)"><span class="icon">⭐</span> Premium</div>
+  <div class="nav-item" onclick="showSection('commands',this)"><span class="icon">💬</span> Commands</div>
+
+  <div class="sidebar-section">Tools</div>
+  <div class="nav-item" onclick="showSection('ai',this)"><span class="icon">🧠</span> AI Settings</div>
+  <div class="nav-item" onclick="showSection('roblox',this)"><span class="icon">🎮</span> Roblox</div>
+  <div class="nav-item" onclick="showSection('setup',this)"><span class="icon">🚀</span> Setup Guide <span class="nav-badge green">New</span></div>
+
+  <div class="sidebar-footer">
+    <div class="bot-status">
+      <div class="status-dot"></div>
+      <div>
+        <div class="status-text">UltraBot Online</div>
+        <div class="status-sub">Latency: 42ms</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div class="page-title" id="page-title"><span>Overview</span> Dashboard</div>
+    <div class="topbar-right">
+      <button class="topbar-btn" onclick="showToast('✅ Config saved!')">Save Changes</button>
+      <button class="topbar-btn primary">🔗 Invite Bot</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══ OVERVIEW ══ -->
+    <div class="section active" id="section-overview">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value">1,247</div>
+          <div class="stat-label">Total Members</div>
+          <div class="stat-change up">▲ +23 today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔨</div>
+          <div class="stat-value">384</div>
+          <div class="stat-label">Mod Actions</div>
+          <div class="stat-change down">▼ -5 vs yesterday</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🚫</div>
+          <div class="stat-value">1,092</div>
+          <div class="stat-label">AutoMod Blocks</div>
+          <div class="stat-change up">▲ +108 today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🤖</div>
+          <div class="stat-value">543</div>
+          <div class="stat-label">AI Questions</div>
+          <div class="stat-change up">▲ +47 today</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">⚡ Recent Actions</div>
+            <span class="badge green">● Live</span>
+          </div>
+          <div class="panel-body">
+            <div class="activity-item">
+              <div class="activity-icon red">🔨</div>
+              <div class="activity-text">
+                <div class="activity-desc">User <strong>SpammerXD</strong> was banned</div>
+                <div class="activity-meta">by Moderator • 2 mins ago • Mass mention</div>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-icon yellow">⚠️</div>
+              <div class="activity-text">
+                <div class="activity-desc">Warning issued to <strong>ToxicUser99</strong></div>
+                <div class="activity-meta">by AutoMod • 5 mins ago • Bad link</div>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-icon purple">🔒</div>
+              <div class="activity-text">
+                <div class="activity-desc"><strong>#general</strong> was locked</div>
+                <div class="activity-meta">by Admin • 12 mins ago • Rule violation</div>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-icon green">✅</div>
+              <div class="activity-text">
+                <div class="activity-desc">AutoMod blocked invite link</div>
+                <div class="activity-meta">from User123 • 18 mins ago • #chat</div>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-icon blue">🎮</div>
+              <div class="activity-text">
+                <div class="activity-desc">AI answered Roblox question</div>
+                <div class="activity-meta">from DevGamer • 22 mins ago • Scripting help</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">📊 AutoMod Stats</div>
+          </div>
+          <div class="panel-body">
+            <div style="display:flex;flex-direction:column;gap:14px;">
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                  <span style="font-size:13px;font-weight:600;">Spam Blocks</span>
+                  <span style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--accent);">487</span>
+                </div>
+                <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;">
+                  <div style="width:72%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                  <span style="font-size:13px;font-weight:600;">Bad Links</span>
+                  <span style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--accent2);">312</span>
+                </div>
+                <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;">
+                  <div style="width:45%;height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent4));border-radius:4px;"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                  <span style="font-size:13px;font-weight:600;">Bad Words</span>
+                  <span style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--accent3);">198</span>
+                </div>
+                <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;">
+                  <div style="width:29%;height:100%;background:linear-gradient(90deg,var(--accent3),var(--accent));border-radius:4px;"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                  <span style="font-size:13px;font-weight:600;">Mass Mentions</span>
+                  <span style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--accent4);">95</span>
+                </div>
+                <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;">
+                  <div style="width:14%;height:100%;background:linear-gradient(90deg,var(--accent4),var(--accent2));border-radius:4px;"></div>
+                </div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                  <span style="font-size:13px;font-weight:600;">Caps Filter</span>
+                  <span style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--muted);">54</span>
+                </div>
+                <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;">
+                  <div style="width:8%;height:100%;background:var(--muted);border-radius:4px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ AUTOMOD ══ -->
+    <div class="section" id="section-automod">
+      <div class="alert alert-info">⚡ Changes here apply instantly. AutoMod runs 24/7 automatically.</div>
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title">🛡️ Protection Settings</div></div>
+          <div class="panel-body">
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Anti-Spam</div>
+                <div class="toggle-desc">Deletes messages sent too fast</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked onchange="showToast('Anti-Spam '+getState(this))"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Anti-Nuke</div>
+                <div class="toggle-desc">Bans users who mass-delete channels or ban members</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked onchange="showToast('Anti-Nuke '+getState(this))"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Anti-Raid</div>
+                <div class="toggle-desc">Alerts when 10+ users join in 10 seconds</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked onchange="showToast('Anti-Raid '+getState(this))"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Block Invite Links</div>
+                <div class="toggle-desc">Removes Discord server invites</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked onchange="showToast('Invite filter '+getState(this))"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Block Bad Links</div>
+                <div class="toggle-desc">Removes phishing, IP grabbers & NSFW links</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked onchange="showToast('Link filter '+getState(this))"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Anti-Caps</div>
+                <div class="toggle-desc">Removes messages that are mostly uppercase</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked onchange="showToast('Caps filter '+getState(this))"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Anti-Mass Mention</div>
+                <div class="toggle-desc">Warns users who mention too many people at once</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked onchange="showToast('Mention filter '+getState(this))"><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title">⚙️ Thresholds & Actions</div></div>
+          <div class="panel-body">
+            <div class="input-group">
+              <label class="input-label">Max Warnings Before Action</label>
+              <input class="input" type="number" value="3" min="1" max="20"/>
+            </div>
+            <div class="input-group">
+              <label class="input-label">Warn Action</label>
+              <select class="input">
+                <option>Mute (Timeout)</option>
+                <option>Kick</option>
+                <option>Ban</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">Auto-Mute Duration (minutes)</label>
+              <input class="input" type="number" value="10" min="1" max="10080"/>
+            </div>
+            <div class="input-group">
+              <label class="input-label">Spam Threshold (msgs per 5s)</label>
+              <input class="input" type="number" value="5" min="2" max="30"/>
+            </div>
+            <div class="input-group">
+              <label class="input-label">Max Mentions Per Message</label>
+              <input class="input" type="number" value="5" min="1" max="50"/>
+            </div>
+            <div class="input-group">
+              <label class="input-label">Caps Threshold (0.0 – 1.0)</label>
+              <input class="input" type="number" value="0.70" step="0.05" min="0.1" max="1"/>
+            </div>
+            <button class="btn btn-primary" onclick="showToast('✅ Thresholds saved!')">💾 Save Thresholds</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🚫 Word Filter</div>
+          <button class="btn btn-sm btn-primary" onclick="addBadWord()">+ Add Word</button>
+        </div>
+        <div class="panel-body">
+          <div style="display:flex;flex-wrap:wrap;gap:8px;" id="bad-words-list">
+            <span class="badge red" style="cursor:pointer;" onclick="removeBadWord(this)">badword1 ✕</span>
+            <span class="badge red" style="cursor:pointer;" onclick="removeBadWord(this)">toxic123 ✕</span>
+            <span class="badge red" style="cursor:pointer;" onclick="removeBadWord(this)">slur1 ✕</span>
+            <span class="badge red" style="cursor:pointer;" onclick="removeBadWord(this)">offensive ✕</span>
+          </div>
+          <div class="input-group" style="margin-top:16px;">
+            <label class="input-label">New Word</label>
+            <div style="display:flex;gap:10px;">
+              <input class="input" id="new-bad-word" placeholder="Enter word to filter..." style="flex:1"/>
+              <button class="btn btn-danger" onclick="addBadWord()">Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ WARNINGS ══ -->
+    <div class="section" id="section-warnings">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">⚠️ User Warnings</div>
+          <button class="btn btn-sm btn-danger" onclick="showToast('Cleared all warnings!')">Clear All</button>
+        </div>
+        <div class="panel-body" style="padding:0;">
+          <table class="table">
+            <thead><tr><th>User</th><th>Warnings</th><th>Last Reason</th><th>Last Action</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>SpamKing99</strong><div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;">ID: 123456789</div></td>
+                <td><span class="badge red">3 warnings</span></td>
+                <td>Mass mention</td>
+                <td><span class="badge yellow">Muted 10m</span></td>
+                <td><button class="btn btn-sm btn-danger" onclick="showToast('Warnings cleared!')">Clear</button></td>
+              </tr>
+              <tr>
+                <td><strong>BadLink_User</strong><div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;">ID: 987654321</div></td>
+                <td><span class="badge yellow">2 warnings</span></td>
+                <td>Bad link posted</td>
+                <td><span class="badge purple">Warned</span></td>
+                <td><button class="btn btn-sm btn-danger" onclick="showToast('Warnings cleared!')">Clear</button></td>
+              </tr>
+              <tr>
+                <td><strong>CapsLockHero</strong><div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;">ID: 111222333</div></td>
+                <td><span class="badge blue">1 warning</span></td>
+                <td>Excessive caps</td>
+                <td><span class="badge purple">Warned</span></td>
+                <td><button class="btn btn-sm btn-danger" onclick="showToast('Warnings cleared!')">Clear</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CHANNELS ══ -->
+    <div class="section" id="section-channels">
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">📡 Channel Configuration</div></div>
+        <div class="panel-body">
+          <div class="grid-2">
+            <div class="input-group">
+              <label class="input-label">📋 Log Channel</label>
+              <select class="input"><option>-- Select Channel --</option><option>#logs</option><option>#bot-logs</option></select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">🔨 Mod Log Channel</label>
+              <select class="input"><option>-- Select Channel --</option><option>#mod-logs</option><option>#staff-logs</option></select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">👋 Welcome Channel</label>
+              <select class="input"><option>-- Select Channel --</option><option>#welcome</option><option>#general</option></select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">🚨 Report Channel</label>
+              <select class="input"><option>-- Select Channel --</option><option>#reports</option><option>#staff-reports</option></select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">💬 Bot Commands Channel</label>
+              <select class="input"><option>-- Select Channel --</option><option>#bot-commands</option><option>#commands</option></select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">🔢 Counting Channel</label>
+              <select class="input"><option>-- Select Channel --</option><option>#counting</option></select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">🛡️ Staff Channel</label>
+              <select class="input"><option>-- Select Channel --</option><option>#staff</option><option>#staff-chat</option></select>
+            </div>
+            <div class="input-group">
+              <label class="input-label">⭐ Premium Channels (multi)</label>
+              <select class="input" multiple style="height:80px;"><option>#premium-chat</option><option>#premium-voice</option><option>#vip-lounge</option></select>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="showToast('✅ Channels saved!')">💾 Save Channel Config</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">🔗 Website & Dashboard Links</div></div>
+        <div class="panel-body">
+          <div class="input-group">
+            <label class="input-label">Website URL</label>
+            <input class="input" placeholder="https://yourwebsite.com"/>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Dashboard URL</label>
+            <input class="input" placeholder="https://yourdashboard.com"/>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Roblox Portfolio Base URL</label>
+            <input class="input" placeholder="https://www.roblox.com/users/"/>
+          </div>
+          <button class="btn btn-primary" onclick="showToast('✅ Links saved!')">💾 Save Links</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ROLES ══ -->
+    <div class="section" id="section-roles">
+      <div class="alert alert-warning">⚠️ Staff roles grant access to moderation commands. Admin roles grant access to configuration commands. Assign carefully!</div>
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title">🎭 Staff Roles</div><button class="btn btn-sm btn-primary" onclick="showToast('Role added!')">+ Add</button></div>
+          <div class="panel-body">
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+                <div><div style="font-size:13px;font-weight:700;">🛡️ Moderator</div><div style="font-size:11px;color:var(--muted);">ID: 111222333</div></div>
+                <button class="btn btn-sm btn-danger" onclick="showToast('Role removed!')">Remove</button>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+                <div><div style="font-size:13px;font-weight:700;">⚡ Trial Mod</div><div style="font-size:11px;color:var(--muted);">ID: 444555666</div></div>
+                <button class="btn btn-sm btn-danger" onclick="showToast('Role removed!')">Remove</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title">👑 Admin Roles</div><button class="btn btn-sm btn-primary" onclick="showToast('Role added!')">+ Add</button></div>
+          <div class="panel-body">
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+                <div><div style="font-size:13px;font-weight:700;">👑 Admin</div><div style="font-size:11px;color:var(--muted);">ID: 777888999</div></div>
+                <button class="btn btn-sm btn-danger" onclick="showToast('Role removed!')">Remove</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">🔐 Daily Staff Code</div></div>
+        <div class="panel-body">
+          <div class="alert alert-info">The daily staff code is auto-generated and DM'd to all staff every 24 hours. Use <code>/generatecode</code> to manually generate one.</div>
+          <div class="input-group" style="margin-top:12px;">
+            <label class="input-label">Today's Code</label>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <input class="input" id="daily-code-field" value="••••••••••••" style="flex:1;font-family:'JetBrains Mono',monospace;letter-spacing:4px;"/>
+              <button class="btn btn-primary" onclick="toggleCode()">👁️ Reveal</button>
+              <button class="btn btn-success" onclick="showToast('✅ New code generated & DM\'d to staff!')">🔄 Regenerate</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ REPORTS ══ -->
+    <div class="section" id="section-reports">
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">🚨 User Reports</div><span class="badge yellow">3 pending</span></div>
+        <div class="panel-body" style="padding:0;">
+          <table class="table">
+            <thead><tr><th>Reporter</th><th>Reported</th><th>Reason</th><th>Time</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>User123</td><td><strong>ToxicPlayer99</strong></td>
+                <td>Harassment in DMs</td><td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);">2 hrs ago</span></td>
+                <td style="display:flex;gap:6px;padding:12px 14px;">
+                  <button class="btn btn-sm btn-danger" onclick="showToast('User banned!')">🔨 Ban</button>
+                  <button class="btn btn-sm btn-success" onclick="showToast('Report closed!')">✅ Dismiss</button>
+                </td>
+              </tr>
+              <tr>
+                <td>Gamer456</td><td><strong>SpamBot2024</strong></td>
+                <td>Spam in #general</td><td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);">5 hrs ago</span></td>
+                <td style="display:flex;gap:6px;padding:12px 14px;">
+                  <button class="btn btn-sm btn-danger" onclick="showToast('User kicked!')">👢 Kick</button>
+                  <button class="btn btn-sm btn-success" onclick="showToast('Report closed!')">✅ Dismiss</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">🐛 Bug Reports</div></div>
+        <div class="panel-body" style="padding:0;">
+          <table class="table">
+            <thead><tr><th>Reporter</th><th>Description</th><th>Time</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>DevGuy</td><td>/poll command breaks with 10 options</td>
+                <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);">1 day ago</span></td>
+                <td><span class="badge yellow">Pending</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MOD LOG ══ -->
+    <div class="section" id="section-modlog">
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">📋 Moderation Log</div></div>
+        <div class="panel-body" style="padding:0;">
+          <table class="table">
+            <thead><tr><th>Action</th><th>Moderator</th><th>Target</th><th>Reason</th><th>Time</th></tr></thead>
+            <tbody>
+              <tr><td><span class="badge red">BAN</span></td><td>AdminUser</td><td>SpamKing99</td><td>Mass mentions + spam</td><td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);">2m ago</td></tr>
+              <tr><td><span class="badge yellow">MUTE</span></td><td>AutoMod</td><td>CapsHero</td><td>Excessive caps</td><td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);">15m ago</td></tr>
+              <tr><td><span class="badge purple">WARN</span></td><td>Moderator1</td><td>NewUser</td><td>Bad language</td><td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);">1h ago</td></tr>
+              <tr><td><span class="badge blue">KICK</span></td><td>AdminUser</td><td>RaidUser5</td><td>Raid attempt</td><td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);">3h ago</td></tr>
+              <tr><td><span class="badge green">UNBAN</span></td><td>AdminUser</td><td>ReformedUser</td><td>Appeal accepted</td><td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);">1d ago</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ AI ══ -->
+    <div class="section" id="section-ai">
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">🧠 AI Configuration</div></div>
+        <div class="panel-body">
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="toggle-label">Enable AI Assistant</div>
+              <div class="toggle-desc">Members can use /ask for Roblox help</div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked onchange="showToast('AI '+getState(this))"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="toggle-label">Roblox-Only Mode</div>
+              <div class="toggle-desc">Restrict AI to Roblox-related questions only</div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked onchange="showToast('Roblox-only '+getState(this))"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="input-group" style="margin-top:16px;">
+            <label class="input-label">Anthropic API Key</label>
+            <input class="input" type="password" placeholder="sk-ant-api03-..." value="sk-ant-api03-••••••••"/>
+          </div>
+          <div class="input-group">
+            <label class="input-label">AI Model</label>
+            <select class="input">
+              <option>claude-sonnet-4-20250514 (Recommended)</option>
+              <option>claude-haiku-4-5-20251001 (Faster)</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Max Response Tokens</label>
+            <input class="input" type="number" value="1000" min="100" max="4000"/>
+          </div>
+          <button class="btn btn-primary" onclick="showToast('✅ AI settings saved!')">💾 Save AI Config</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ROBLOX ══ -->
+    <div class="section" id="section-roblox">
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">🎮 Roblox Portfolio Settings</div></div>
+        <div class="panel-body">
+          <div class="alert alert-info">Portfolio IDs are obfuscated by mixing numbers with similar-looking letters (e.g. 0→O, 1→l, 5→S) so they work on Discord but can't be directly copied into Roblox.</div>
+          <div class="input-group" style="margin-top:16px;">
+            <label class="input-label">Portfolio Base URL</label>
+            <input class="input" value="https://www.roblox.com/users/"/>
+          </div>
+          <div style="margin-top:16px;">
+            <div class="panel-title" style="margin-bottom:12px;">🔡 ID Obfuscation Preview</div>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <input class="input" id="roblox-id-input" placeholder="Enter Roblox User ID..." style="flex:1;" oninput="previewObfuscate()"/>
+              <div class="input" id="roblox-id-output" style="flex:1;color:var(--accent3);cursor:default;">Obfuscated ID appears here</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PREMIUM ══ -->
+    <div class="section" id="section-premium">
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">⭐ Premium Members</div></div>
+        <div class="panel-body" style="padding:0;">
+          <table class="table">
+            <thead><tr><th>User</th><th>Granted By</th><th>Since</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>VIPGamer</strong><div style="font-size:11px;color:var(--muted);">ID: 111111111</div></td>
+                <td>AdminUser</td>
+                <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;">2024-01-15</span></td>
+                <td><button class="btn btn-sm btn-danger" onclick="showToast('Premium removed!')">Remove</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ COMMANDS ══ -->
+    <div class="section" id="section-commands">
+      <div class="search-bar">
+        <span>🔍</span>
+        <input placeholder="Search commands..." oninput="filterCommands(this.value)"/>
+      </div>
+      <div class="cmd-grid" id="cmd-grid">
+      </div>
+    </div>
+
+    <!-- ══ ACTIVITY ══ -->
+    <div class="section" id="section-activity">
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">⚡ Live Activity Feed</div><span class="badge green">● Live</span></div>
+        <div class="panel-body" id="live-feed">
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SETUP ══ -->
+    <div class="section" id="section-setup">
+      <div class="alert alert-success">🚀 Follow these steps to deploy UltraBot on Render for free (or paid for 24/7 uptime).</div>
+
+      <div class="panel" style="margin-bottom:20px;">
+        <div class="panel-header"><div class="panel-title">📋 Step-by-Step: Deploy on Render</div></div>
+        <div class="panel-body">
+          <div class="render-steps">
+
+            <div class="setup-step">
+              <div class="step-num">1</div>
+              <div class="step-content">
+                <div class="step-title">Create a Discord Application & Bot</div>
+                <div class="step-desc">
+                  Go to <strong>discord.com/developers/applications</strong> → New Application → Name it → Go to "Bot" tab → Add Bot → Copy the <strong>Token</strong> (keep it secret!).<br/>
+                  Enable these Intents: <strong>Presence Intent, Server Members Intent, Message Content Intent</strong>.<br/>
+                  Under OAuth2 → URL Generator: select <code>bot</code> + <code>applications.commands</code> → Permissions: <code>Administrator</code> → Copy the URL and invite the bot to your server.
+                </div>
+                <div class="code-block">
+                  <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                  <span class="comment"># You'll need this token in step 4</span><br/>
+                  DISCORD_TOKEN=your_bot_token_here<br/>
+                  ANTHROPIC_API_KEY=your_anthropic_key_here
+                </div>
+              </div>
+            </div>
+
+            <div class="setup-step">
+              <div class="step-num">2</div>
+              <div class="step-content">
+                <div class="step-title">Push the Files to GitHub</div>
+                <div class="step-desc">
+                  Create a new GitHub repository (can be private). Upload these files: <strong>bot.py</strong>, <strong>requirements.txt</strong>. Do NOT upload config.json or any .json files with tokens. Add a <code>.gitignore</code>:
+                </div>
+                <div class="code-block">
+                  <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                  <span class="comment"># .gitignore</span><br/>
+                  config.json<br/>
+                  warnings.json<br/>
+                  staff_codes.json<br/>
+                  reports.json<br/>
+                  premium.json<br/>
+                  counting.json<br/>
+                  notes.json<br/>
+                  timers.json<br/>
+                  *.pyc<br/>
+                  __pycache__/<br/>
+                  .env
+                </div>
+              </div>
+            </div>
+
+            <div class="setup-step">
+              <div class="step-num">3</div>
+              <div class="step-content">
+                <div class="step-title">Create a Render Account & New Service</div>
+                <div class="step-desc">
+                  Go to <strong>render.com</strong> → Sign up (free) → Click <strong>"New +"</strong> → Select <strong>"Background Worker"</strong> (important — NOT web service, bot has no HTTP server).<br/>
+                  Connect your GitHub account → Select your bot repository.
+                </div>
+              </div>
+            </div>
+
+            <div class="setup-step">
+              <div class="step-num">4</div>
+              <div class="step-content">
+                <div class="step-title">Configure the Render Service</div>
+                <div class="step-desc">Fill in these settings in the Render dashboard:</div>
+                <div class="code-block">
+                  <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                  <span class="key">Name:</span>           <span class="val">ultrabot</span><br/>
+                  <span class="key">Runtime:</span>        <span class="val">Python 3</span><br/>
+                  <span class="key">Build Command:</span>  <span class="str">pip install -r requirements.txt</span><br/>
+                  <span class="key">Start Command:</span>  <span class="str">python bot.py</span><br/>
+                  <span class="key">Instance Type:</span>  <span class="val">Free (or Starter $7/mo for 24/7)</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="setup-step">
+              <div class="step-num">5</div>
+              <div class="step-content">
+                <div class="step-title">Add Environment Variables</div>
+                <div class="step-desc">In Render → Your Service → <strong>Environment</strong> tab → Add these variables:</div>
+                <div class="code-block">
+                  <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                  <span class="key">DISCORD_TOKEN</span>       = <span class="str">your_discord_bot_token</span><br/>
+                  <span class="key">ANTHROPIC_API_KEY</span>   = <span class="str">sk-ant-api03-your_key_here</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="setup-step">
+              <div class="step-num">6</div>
+              <div class="step-content">
+                <div class="step-title">Deploy & First Run Setup</div>
+                <div class="step-desc">Click <strong>Deploy</strong>. Watch the logs — you should see <code>✅ UltraBot is online!</code> and <code>🔄 Synced X slash commands</code>.<br/><br/>
+                In your Discord server, run these commands to finish setup:</div>
+                <div class="code-block">
+                  <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                  <span class="comment"># 1. Set yourself as owner (first time only)</span><br/>
+                  /setowner<br/><br/>
+                  <span class="comment"># 2. Set up channels</span><br/>
+                  /setlog #logs<br/>
+                  /setmodlog #mod-logs<br/>
+                  /setwelcome #welcome<br/>
+                  /setreport #reports<br/>
+                  /setbotchannel #bot-commands<br/>
+                  /setcounting #counting<br/>
+                  /setstaff #staff-chat<br/><br/>
+                  <span class="comment"># 3. Add staff & admin roles</span><br/>
+                  /addstaffrole @Moderator<br/>
+                  /addadminrole @Admin<br/><br/>
+                  <span class="comment"># 4. Generate today's staff code (owner only)</span><br/>
+                  /generatecode<br/><br/>
+                  <span class="comment"># 5. Set website & dashboard links</span><br/>
+                  /setwebsite https://yoursite.com<br/>
+                  /setdashboard https://yourdashboard.com
+                </div>
+              </div>
+            </div>
+
+            <div class="setup-step">
+              <div class="step-num">7</div>
+              <div class="step-content">
+                <div class="step-title">⚠️ Free Tier Limitation & Fix</div>
+                <div class="step-desc">
+                  Render's free tier spins down after 15 mins of inactivity. For Discord bots (which are always-on background workers), <strong>this usually isn't an issue</strong> since the bot keeps the connection alive.<br/><br/>
+                  If your bot goes offline, upgrade to <strong>Starter ($7/mo)</strong> for guaranteed 24/7 uptime, or use <strong>UptimeRobot</strong> (free) to ping a keep-alive endpoint.
+                </div>
+                <div class="code-block">
+                  <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                  <span class="comment"># Add this to bot.py for a keep-alive HTTP endpoint</span><br/>
+                  <span class="comment"># (needed if using Render Web Service instead of Background Worker)</span><br/>
+                  from aiohttp import web<br/>
+                  async def health(request):<br/>
+                  &nbsp;&nbsp;&nbsp;&nbsp;return web.Response(text="OK")<br/>
+                  app = web.Application()<br/>
+                  app.router.add_get('/', health)
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">📁 Required Files Checklist</div></div>
+        <div class="panel-body">
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+              <span style="font-size:18px;">✅</span>
+              <div><div style="font-weight:700;font-family:'JetBrains Mono',monospace;">bot.py</div><div style="font-size:12px;color:var(--muted);">Main bot file — all commands and logic</div></div>
+              <span class="badge green" style="margin-left:auto;">Required</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+              <span style="font-size:18px;">✅</span>
+              <div><div style="font-weight:700;font-family:'JetBrains Mono',monospace;">requirements.txt</div><div style="font-size:12px;color:var(--muted);">Python dependencies — discord.py, aiohttp</div></div>
+              <span class="badge green" style="margin-left:auto;">Required</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+              <span style="font-size:18px;">🔒</span>
+              <div><div style="font-weight:700;font-family:'JetBrains Mono',monospace;">DISCORD_TOKEN</div><div style="font-size:12px;color:var(--muted);">Set as Render environment variable — never in code!</div></div>
+              <span class="badge yellow" style="margin-left:auto;">Env Var</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+              <span style="font-size:18px;">🔒</span>
+              <div><div style="font-weight:700;font-family:'JetBrains Mono',monospace;">ANTHROPIC_API_KEY</div><div style="font-size:12px;color:var(--muted);">For the /ask AI command — set as Render env var</div></div>
+              <span class="badge yellow" style="margin-left:auto;">Env Var</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+              <span style="font-size:18px;">📄</span>
+              <div><div style="font-weight:700;font-family:'JetBrains Mono',monospace;">dashboard.html</div><div style="font-size:12px;color:var(--muted);">This file — host separately on Netlify, GitHub Pages, or Vercel</div></div>
+              <span class="badge blue" style="margin-left:auto;">Optional</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Nav ──
+function showSection(id, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('section-' + id).classList.add('active');
+  el.classList.add('active');
+  const titles = {
+    overview:'Overview', activity:'Live Activity', automod:'AutoMod Config',
+    warnings:'Warnings', reports:'Reports', modlog:'Mod Log',
+    channels:'Channels', roles:'Roles & Staff', premium:'Premium',
+    commands:'Commands', ai:'AI Settings', roblox:'Roblox', setup:'Setup Guide'
+  };
+  document.getElementById('page-title').innerHTML = `<span>${titles[id]||id}</span> Dashboard`;
+  if(id==='commands') renderCommands();
+  if(id==='activity') startLiveFeed();
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── Toggle helper ──
+function getState(el){ return el.checked ? 'enabled ✅' : 'disabled ❌'; }
+
+// ── Copy code ──
+function copyCode(btn) {
+  const block = btn.parentElement;
+  const text = block.innerText.replace('Copy','').trim();
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✅ Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+
+// ── Bad words ──
+function addBadWord() {
+  const input = document.getElementById('new-bad-word');
+  const val = input.value.trim();
+  if(!val) return;
+  const list = document.getElementById('bad-words-list');
+  const span = document.createElement('span');
+  span.className = 'badge red';
+  span.style.cursor = 'pointer';
+  span.textContent = val + ' ✕';
+  span.onclick = () => removeBadWord(span);
+  list.appendChild(span);
+  input.value = '';
+  showToast('Word "' + val + '" added to filter!');
+}
+function removeBadWord(el){ el.remove(); showToast('Word removed!'); }
+
+// ── Toggle code reveal ──
+let codeRevealed = false;
+function toggleCode() {
+  const f = document.getElementById('daily-code-field');
+  codeRevealed = !codeRevealed;
+  f.value = codeRevealed ? 'Xk9mR3pL7nQw' : '••••••••••••';
+}
+
+// ── Roblox obfuscate ──
+function previewObfuscate() {
+  const input = document.getElementById('roblox-id-input').value;
+  const map = {'0':'O','1':'l','2':'Z','3':'E','4':'A','5':'S','6':'G','7':'T','8':'B','9':'q'};
+  let result = '';
+  for(let i=0;i<input.length;i++){
+    const ch = input[i];
+    if(i%2===0 && map[ch]) result += map[ch];
+    else result += ch;
+  }
+  document.getElementById('roblox-id-output').textContent = result || 'Obfuscated ID appears here';
+}
+
+// ── Commands ──
+const COMMANDS = [
+  {name:'/ban',desc:'Ban a user',badge:'staff',color:'red'},
+  {name:'/unban',desc:'Unban by user ID',badge:'staff',color:'red'},
+  {name:'/kick',desc:'Kick a user',badge:'staff',color:'red'},
+  {name:'/mute',desc:'Timeout a user',badge:'staff',color:'yellow'},
+  {name:'/unmute',desc:'Remove timeout',badge:'staff',color:'yellow'},
+  {name:'/warn',desc:'Issue a warning',badge:'staff',color:'yellow'},
+  {name:'/warnings',desc:'View user warnings',badge:'staff',color:'yellow'},
+  {name:'/clearwarnings',desc:'Clear all warnings',badge:'admin',color:'purple'},
+  {name:'/purge',desc:'Delete messages in bulk',badge:'staff',color:'red'},
+  {name:'/slowmode',desc:'Set channel slowmode',badge:'staff',color:'blue'},
+  {name:'/lock',desc:'Lock a channel',badge:'staff',color:'red'},
+  {name:'/unlock',desc:'Unlock a channel',badge:'staff',color:'green'},
+  {name:'/lockdown',desc:'Lock ALL channels',badge:'admin',color:'red'},
+  {name:'/unlockdown',desc:'Unlock ALL channels',badge:'admin',color:'green'},
+  {name:'/nick',desc:'Change user nickname',badge:'staff',color:'blue'},
+  {name:'/role',desc:'Add/remove role',badge:'admin',color:'purple'},
+  {name:'/softban',desc:'Ban & unban to clear msgs',badge:'staff',color:'red'},
+  {name:'/tempban',desc:'Temporary ban',badge:'staff',color:'red'},
+  {name:'/userinfo',desc:'View user details',badge:'all',color:'blue'},
+  {name:'/serverinfo',desc:'View server info',badge:'all',color:'blue'},
+  {name:'/avatar',desc:'View user avatar',badge:'all',color:'blue'},
+  {name:'/report',desc:'Report a user',badge:'all',color:'yellow'},
+  {name:'/bugreport',desc:'Report a bug',badge:'all',color:'yellow'},
+  {name:'/announce',desc:'Send announcement',badge:'admin',color:'purple'},
+  {name:'/embed',desc:'Send custom embed',badge:'staff',color:'blue'},
+  {name:'/poll',desc:'Create a poll',badge:'staff',color:'blue'},
+  {name:'/giveaway',desc:'Start a giveaway',badge:'staff',color:'green'},
+  {name:'/timer',desc:'Set a countdown timer',badge:'all',color:'blue'},
+  {name:'/remindme',desc:'Set a reminder',badge:'all',color:'blue'},
+  {name:'/staff',desc:'Access staff panel (code required)',badge:'staff',color:'purple'},
+  {name:'/generatecode',desc:'Generate daily staff code',badge:'owner',color:'red'},
+  {name:'/ask',desc:'Ask the Roblox AI',badge:'all',color:'green'},
+  {name:'/clearai',desc:'Clear AI history',badge:'all',color:'blue'},
+  {name:'/portfolio',desc:'View Roblox portfolio',badge:'all',color:'blue'},
+  {name:'/roblox',desc:'Look up Roblox user',badge:'all',color:'blue'},
+  {name:'/coinflip',desc:'Flip a coin',badge:'all',color:'green'},
+  {name:'/8ball',desc:'Ask the 8 ball',badge:'all',color:'green'},
+  {name:'/dice',desc:'Roll dice',badge:'all',color:'green'},
+  {name:'/choose',desc:'Choose between options',badge:'all',color:'green'},
+  {name:'/feedback',desc:'Submit server feedback',badge:'all',color:'blue'},
+  {name:'/suggest',desc:'Submit a suggestion',badge:'all',color:'blue'},
+  {name:'/premium',desc:'Check premium status',badge:'all',color:'yellow'},
+  {name:'/addpremium',desc:'Grant premium to user',badge:'admin',color:'purple'},
+  {name:'/dmuser',desc:'DM a user as bot',badge:'staff',color:'blue'},
+  {name:'/dmreply',desc:'Reply to user DM',badge:'staff',color:'blue'},
+  {name:'/broadcast',desc:'DM all members',badge:'admin',color:'red'},
+  {name:'/note',desc:'Add note about user',badge:'staff',color:'yellow'},
+  {name:'/notes',desc:'View notes about user',badge:'staff',color:'yellow'},
+  {name:'/config',desc:'View bot config',badge:'admin',color:'purple'},
+  {name:'/setlog',desc:'Set log channel',badge:'admin',color:'purple'},
+  {name:'/automod',desc:'Configure automod',badge:'admin',color:'purple'},
+  {name:'/addbadword',desc:'Add word to filter',badge:'admin',color:'purple'},
+  {name:'/auditlog',desc:'View audit log',badge:'staff',color:'blue'},
+  {name:'/stafflist',desc:'View staff members',badge:'all',color:'blue'},
+  {name:'/ping',desc:'Check bot latency',badge:'all',color:'green'},
+  {name:'/help',desc:'View all commands',badge:'all',color:'blue'},
+];
+
+function renderCommands(filter='') {
+  const grid = document.getElementById('cmd-grid');
+  const filtered = COMMANDS.filter(c =>
+    c.name.includes(filter.toLowerCase()) || c.desc.toLowerCase().includes(filter.toLowerCase())
+  );
+  grid.innerHTML = filtered.map(c => `
+    <div class="cmd-card">
+      <div class="cmd-name">${c.name}</div>
+      <div class="cmd-desc">${c.desc}</div>
+      <div class="cmd-badge"><span class="badge ${c.color}">${c.badge}</span></div>
+    </div>
+  `).join('');
+}
+
+function filterCommands(v){ renderCommands(v); }
+
+// ── Live feed ──
+const feedEvents = [
+  {icon:'🔨',color:'red',desc:'AutoMod banned <strong>Raider99</strong>',meta:'Anti-nuke triggered • just now'},
+  {icon:'⚠️',color:'yellow',desc:'Warning issued to <strong>Spammer</strong>',meta:'Excessive spam • 10s ago'},
+  {icon:'✅',color:'green',desc:'Bad link removed in <strong>#general</strong>',meta:'Phishing link • 20s ago'},
+  {icon:'🎮',color:'blue',desc:'AI answered question from <strong>DevGuy</strong>',meta:'Roblox scripting • 45s ago'},
+  {icon:'🔒',color:'purple',desc:'<strong>#off-topic</strong> locked by Mod',meta:'Rule violation • 1m ago'},
+  {icon:'👋',color:'green',desc:'New member <strong>NewUser123</strong> joined',meta:'Welcome sent • 2m ago'},
+];
+
+let feedRunning = false;
+function startLiveFeed() {
+  if(feedRunning) return;
+  feedRunning = true;
+  const feed = document.getElementById('live-feed');
+  feed.innerHTML = '';
+  feedEvents.forEach((e,i) => {
+    setTimeout(() => addFeedItem(feed, e), i * 800);
+  });
+  setInterval(() => {
+    const e = feedEvents[Math.floor(Math.random()*feedEvents.length)];
+    addFeedItem(feed, {...e, meta: e.meta.replace(/\d+s ago|just now|\d+m ago/, 'just now')});
+  }, 4000);
+}
+
+function addFeedItem(feed, e) {
+  const div = document.createElement('div');
+  div.className = 'activity-item';
+  div.style.opacity = '0';
+  div.style.transform = 'translateX(-20px)';
+  div.style.transition = 'all 0.3s ease';
+  div.innerHTML = `
+    <div class="activity-icon ${e.color}">${e.icon}</div>
+    <div class="activity-text">
+      <div class="activity-desc">${e.desc}</div>
+      <div class="activity-meta">${e.meta}</div>
+    </div>
+  `;
+  feed.insertBefore(div, feed.firstChild);
+  requestAnimationFrame(() => { div.style.opacity='1'; div.style.transform='translateX(0)'; });
+  if(feed.children.length > 20) feed.removeChild(feed.lastChild);
+}
+</script>
+</body>
+</html>
