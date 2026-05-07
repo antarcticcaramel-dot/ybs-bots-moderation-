@@ -1511,8 +1511,36 @@ async def on_ready():
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="the server 👁️"))
     daily_code_task.start()
 
+# ─── KEEP-ALIVE (required for Render Web Service) ────────────────────────────
+# Render Web Service requires an HTTP server to stay alive.
+# This spins up a tiny aiohttp server on PORT (default 10000) alongside the bot.
+
+from aiohttp import web as aiohttp_web
+
+async def health_check(request):
+    return aiohttp_web.Response(
+        text="✅ UltraBot is online!",
+        headers={"Content-Type": "text/plain"}
+    )
+
+async def start_web_server():
+    app = aiohttp_web.Application()
+    app.router.add_get("/", health_check)
+    app.router.add_get("/health", health_check)
+    runner = aiohttp_web.AppRunner(app)
+    await runner.setup()
+    port = int(os.environ.get("PORT", 10000))
+    site = aiohttp_web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    print(f"🌐 Web server running on port {port}")
+
 # ─── RUN ──────────────────────────────────────────────────────────────────────
 
-if __name__ == "__main__":
+async def main():
     TOKEN = os.environ.get("DISCORD_TOKEN", "YOUR_BOT_TOKEN_HERE")
-    bot.run(TOKEN)
+    # Start web server and bot together
+    await start_web_server()
+    await bot.start(TOKEN)
+
+if __name__ == "__main__":
+    asyncio.run(main())
