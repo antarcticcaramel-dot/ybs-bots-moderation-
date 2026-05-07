@@ -1511,35 +1511,241 @@ async def on_ready():
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="the server 👁️"))
     daily_code_task.start()
 
-# ─── KEEP-ALIVE (required for Render Web Service) ────────────────────────────
-# Render Web Service requires an HTTP server to stay alive.
-# This spins up a tiny aiohttp server on PORT (default 10000) alongside the bot.
+# ─── REST API (keep-alive + live dashboard data) ─────────────────────────────
 
 from aiohttp import web as aiohttp_web
 
-async def health_check(request):
+# In-memory mod log (last 100 actions)
+mod_log_cache = []
+
+def push_mod_log(action, moderator, target, reason):
+    mod_log_cache.append({
+        "action": action,
+        "moderator": str(moderator),
+        "target": str(target),
+        "reason": reason,
+        "time": datetime.datetime.utcnow().isoformat()
+    })
+    if len(mod_log_cache) > 100:
+        mod_log_cache.pop(0)
+
+# Automod counters (reset on restart)
+automod_counts = defaultdict(int)
+
+def inc_automod(category: str):
+    automod_counts[category] += 1
+
+# ── CORS middleware ──
+@aiohttp_web.middleware
+async def cors_middleware(request, handler):
+    if request.method == "OPTIONS":
+        return aiohttp_web.Response(headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, X-API-Key",
+        })
+    resp = await handler(request)
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    return resp
+
+# ── API key check ──
+def check_api_key(request):
+    api_key = os.environ.get("DASHBOARD_API_KEY", "")
+    if not api_key:
+        return True  # no key set = open (set one in Render env vars)
+    return request.headers.get("X-API-Key") == api_key
+
+def json_response(data, status=200):
     return aiohttp_web.Response(
-        text="✅ UltraBot is online!",
-        headers={"Content-Type": "text/plain"}
+        text=json.dumps(data),
+        status=status,
+        content_type="application/json"
     )
 
-async def start_web_server():
-    app = aiohttp_web.Application()
-    app.router.add_get("/", health_check)
-    app.router.add_get("/health", health_check)
+# ── ROUTES ──
+
+async def route_health(request):
+    return aiohttp_web.Response(text="✅ UltraBot is online!")
+
+async def route_stats(request):
+    if not check_api_key(request):
+        return json_response({"error": "Unauthorized"}, 401)
+    guild_id = config.get("guild_id")
+    guild = bot.get_guild(guild_id) if guild_id else None
+    total_warnings = sum(len(v) for v in warnings.values())
+    return json_response({
+        "online": True,
+        "latency_ms": round(bot.latency * 1000),
+        "guild_name": guild.name if guild else "Unknown",
+        "guild_icon": str(guild.icon.url) if guild and guild.icon else None,
+        "member_count": guild.member_count if guild else 0,
+        "channel_count": len(guild.channels) if guild else 0,
+        "role_count": len(guild.roles) if guild else 0,
+        "boost_count": guild.premium_subscription_count if guild else 0,
+        "total_warnings": total_warnings,
+        "premium_count": len(premium),
+        "bug_reports": len(reports.get("bugs", [])),
+        "user_reports": len(reports.get("users", [])),
+        "automod": dict(automod_counts),
+        "automod_config": config.get("automod", {}),
+        "counting_count": counting.get("count", 0),
+    })
+
+async def route_warnings(request):
+    if not check_api_key(request):
+        return json_response({"error": "Unauthorized"}, 401)
+    guild_id = config.get("guild_id")
+    guild = bot.get_guild(guild_id) if guild_id else None
+    result = []
+    for uid, warns in warnings.items():
+        member = guild.get_member(int(uid)) if guild else None
+        result.append({
+            "user_id": uid,
+            "username": str(member) if member else f"Unknown ({uid})",
+            "avatar": str(member.display_avatar.url) if member else None,
+            "count": len(warns),
+            "warns": warns
+        })
+    result.sort(key=lambda x: x["count"], reverse=True)
+    return json_response(result)
+
+async def route_modlog(request):
+    if not check_api_key(request):
+        return json_response({"error": "Unauthorized"}, 401)
+    return json_response(list(reversed(mod_log_cache)))
+
+async def route_reports(request):
+    if not check_api_key(request):
+        return json_response({"error": "Unauthorized"}, 401)
+    return json_response(reports)
+
+async def route_config(request):
+    if not check_api_key(request):
+        return json_response({"error": "Unauthorized"}, 401)
+    safe = {k: v for k, v in config.items() if k not in ("staff_code", "daily_codes")}
+    return json_response(safe)
+
+async def route_members(request):
+    if not check_api_key(request):
+        return json_response({"error": "Unauthorized"}, 401)
+    guild_id = config.get("guild_id")
+    guild = bot.get_guild(guild_id) if guild_id else None
+    if not guild:
+        return json_response([])
+    result = []
+    staff_ids = set(config.get("staff_roles",[]) + config.get("admin_roles",[]) + config.get("mod_roles",[]))
+    for m in guild.members:
+        if m.bot:
+            continue
+        result.append({
+            "id": str(m.id),
+            "username": str(m),
+            "nick": m.nick,
+            "avatar": str(m.display_avatar.url),
+            "is_staff": any(r.id in staff_ids for r in m.roles),
+            "is_admin": m.guild_permissions.administrator,
+            "warnings": len(warnings.get(str(m.id), [])),
+            "premium": str(m.id) in premium,
+            "joined": m.joined_at.isoformat() if m.joined_at else None,
+        })
+    return json_response(result)
+
+async def route_premium(request):
+    if not check_api_key(request):
+        return json_response({"error": "Unauthorized"}, 401)
+    guild_id = config.get("guild_id")
+    guild = bot.get_guild(guild_id) if guild_id else None
+    result = []
+    for uid, data in premium.items():
+        member = guild.get_member(int(uid)) if guild else None
+        result.append({
+            "user_id": uid,
+            "username": str(member) if member else f"Unknown ({uid})",
+            "avatar": str(member.display_avatar.url) if member else None,
+            **data
+        })
+    return json_response(result)
+
+async def route_update_automod(request):
+    """POST /api/automod — update automod config from dashboard"""
+    if not check_api_key(request):
+        return json_response({"error": "Unauthorized"}, 401)
+    try:
+        data = await request.json()
+        config["automod"].update(data)
+        save_json(CONFIG_FILE, config)
+        return json_response({"ok": True})
+    except Exception as e:
+        return json_response({"error": str(e)}, 400)
+
+async def route_clear_warnings(request):
+    """POST /api/warnings/clear — clear warnings for a user"""
+    if not check_api_key(request):
+        return json_response({"error": "Unauthorized"}, 401)
+    try:
+        data = await request.json()
+        uid = str(data.get("user_id"))
+        warnings.pop(uid, None)
+        save_json(WARNINGS_FILE, warnings)
+        return json_response({"ok": True})
+    except Exception as e:
+        return json_response({"error": str(e)}, 400)
+
+async def route_dismiss_report(request):
+    """POST /api/reports/dismiss"""
+    if not check_api_key(request):
+        return json_response({"error": "Unauthorized"}, 401)
+    try:
+        data = await request.json()
+        rtype = data.get("type", "users")
+        idx = data.get("index", -1)
+        if 0 <= idx < len(reports.get(rtype, [])):
+            reports[rtype].pop(idx)
+            save_json(REPORTS_FILE, reports)
+        return json_response({"ok": True})
+    except Exception as e:
+        return json_response({"error": str(e)}, 400)
+
+async def start_api_server():
+    app = aiohttp_web.Application(middlewares=[cors_middleware])
+    app.router.add_get("/",                    route_health)
+    app.router.add_get("/health",              route_health)
+    app.router.add_get("/api/stats",           route_stats)
+    app.router.add_get("/api/warnings",        route_warnings)
+    app.router.add_get("/api/modlog",          route_modlog)
+    app.router.add_get("/api/reports",         route_reports)
+    app.router.add_get("/api/config",          route_config)
+    app.router.add_get("/api/members",         route_members)
+    app.router.add_get("/api/premium",         route_premium)
+    app.router.add_post("/api/automod",        route_update_automod)
+    app.router.add_post("/api/warnings/clear", route_clear_warnings)
+    app.router.add_post("/api/reports/dismiss",route_dismiss_report)
+    app.router.add_options("/{tail:.*}",       route_health)  # CORS preflight
+
     runner = aiohttp_web.AppRunner(app)
     await runner.setup()
     port = int(os.environ.get("PORT", 10000))
     site = aiohttp_web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
-    print(f"🌐 Web server running on port {port}")
+    print(f"🌐 API server running on port {port}")
+
+# Patch _mod_log to also push to cache
+_original_mod_log = _mod_log
+async def _mod_log(guild, action, moderator, target, reason):
+    push_mod_log(action, moderator, target, reason)
+    await _original_mod_log(guild, action, moderator, target, reason)
+
+# Patch log_automod to count automod hits
+_original_log_automod = log_automod
+async def log_automod(guild, action, user, reason, channel=None):
+    inc_automod(action.lower().replace(" ", "_"))
+    await _original_log_automod(guild, action, user, reason, channel)
 
 # ─── RUN ──────────────────────────────────────────────────────────────────────
 
 async def main():
     TOKEN = os.environ.get("DISCORD_TOKEN", "YOUR_BOT_TOKEN_HERE")
-    # Start web server and bot together
-    await start_web_server()
+    await start_api_server()
     await bot.start(TOKEN)
 
 if __name__ == "__main__":
